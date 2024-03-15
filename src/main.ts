@@ -26,6 +26,7 @@ app.use(async (ctx) => {
     "/index.html",
     "/js/script.js",
     "/css/style.css",
+    "/videos/bg.mp4",
   ];
   if (fileWhitelist.includes(filePath)) {
     await send(ctx, filePath, {
