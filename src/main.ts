@@ -1,4 +1,4 @@
-import { Application, send } from "jsr:@oak/oak@14";
+import { Application, log, send } from "./deps.ts";
 import api from "./api.ts";
 
 const app = new Application();
@@ -7,7 +7,7 @@ const PORT = 8000;
 app.use(async (ctx, next) => {
   await next();
   const time = ctx.response.headers.get("X-Response-Time");
-  console.log(`${ctx.request.method} ${ctx.request.url}: ${time}`);
+  log.info(`${ctx.request.method} ${ctx.request.url}: ${time}`);
 });
 
 app.use(async (ctx, next) => {
