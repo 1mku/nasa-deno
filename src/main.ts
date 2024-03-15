@@ -11,6 +11,19 @@ app.use(async (ctx, next) => {
 });
 
 app.use(async (ctx, next) => {
+  try {
+    await next();
+  } catch (err) {
+    ctx.response.body = "Internal server error";
+    throw err;
+  }
+});
+
+app.addEventListener("error", (event) => {
+  log.error(event.error);
+});
+
+app.use(async (ctx, next) => {
   const startTime = Date.now();
   await next();
   const delta = Date.now() - startTime;
