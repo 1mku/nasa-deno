@@ -1,15 +1,11 @@
-import { Router, send } from "./deps.ts";
+import { Hono, HTTPException } from "./deps.ts";
 import * as planets from "./models/planets.ts";
 import * as launches from "./models/launches.ts";
 
-const router = new Router();
+const api = new Hono();
 
-router.get("/", async (ctx) => {
-  await send(ctx, "index.html", { root: `${Deno.cwd()}/public/` });
-});
-
-router.get("/ascii", (ctx) => {
-  ctx.response.body = `
+api.get("/ascii", (c) => {
+  return c.body(`
       {___     {__      {_         {__ __        {_       
       {_ {__   {__     {_ __     {__    {__     {_ __     
       {__ {__  {__    {_  {__     {__          {_  {__    
@@ -17,40 +13,43 @@ router.get("/ascii", (ctx) => {
       {__   {_ {__  {______ {__        {__   {______ {__  
       {__    {_ __ {__       {__ {__    {__ {__       {__ 
       {__      {__{__         {__  {__ __  {__         {__
-                      Mission Control API`;
+                      Mission Control API`);
 });
 
-router.get("/planets", (ctx) => {
-  ctx.response.body = planets.getAll();
+api.get("/planets", (c) => {
+  return c.json(planets.getAll());
 });
 
-router.get("/launches", (ctx) => {
-  ctx.response.body = launches.getAll();
+api.get("/launches", (c) => {
+  return c.json(launches.getAll());
 });
-
-router.get("/launches/:id", (ctx) => {
-  if (ctx.params?.id) {
-    const launchesList = launches.getOne(Number(ctx.params.id));
-    if (launchesList) ctx.response.body = launchesList;
+api.get("/launches/:id", async (c, next) => {
+  if (c.req.param("id")) {
+    const launchesList = launches.getOne(Number(c.req.param("id")));
+    if (launchesList) return c.json(launchesList);
     else {
-      ctx.throw(400, "Launch with this ID does not exist");
+      throw new HTTPException(400, {
+        message: "Launch with this ID does not exist",
+      });
     }
   }
+  await next();
 });
 
-router.delete("/launches/:id", (ctx) => {
-  if (ctx.params?.id) {
-    const result = launches.removeOne(Number(ctx.params.id));
-    ctx.response.body = { success: result };
+api.delete("/launches/:id", async (c, next) => {
+  const { id } = c.req.param();
+  if (id) {
+    const result = launches.removeOne(Number(id));
+    return c.json({ success: result });
   }
+  await next();
 });
 
-router.post("/launches", async (ctx) => {
-  const body = await ctx.request.body.json();
+api.post("/launches", async (c) => {
+  const body = await c.req.json();
 
   launches.addOne(body);
-  ctx.response.body = { success: true };
-  ctx.response.status = 201;
+  return c.json({ success: true }, 201);
 });
 
-export default router;
+export default api;

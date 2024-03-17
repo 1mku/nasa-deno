@@ -1,6 +1,8 @@
 // @ts-nocheck
 let launches;
 
+const API = "/api"
+
 const numberHeading = "No.".padStart(5);
 const dateHeading = "Date".padEnd(15);
 const missionHeading = "Mission".padEnd(25);
@@ -16,7 +18,7 @@ function initValues() {
 }
 
 function loadLaunches() {
-  return fetch("/launches")
+  return fetch(`${API}/launches`)
     .then((launchesResponse) => launchesResponse.json())
     .then((fetchedLaunches) => {
       launches = fetchedLaunches.sort((a, b) => {
@@ -26,7 +28,7 @@ function loadLaunches() {
 }
 
 function loadPlanets() {
-  fetch('/planets')
+  fetch(`${API}/planets`)
     .then(planetsResponse => planetsResponse.json()).then(planets => {
       const planetSelector = document.getElementById("planets-selector");
       planets.forEach((planet) => {
@@ -36,7 +38,7 @@ function loadPlanets() {
 }
 
 function abortLaunch(id) {
-  return fetch(`/launches/${id}`, {
+  return fetch(`${API}/launches/${id}`, {
     method: "delete",
   })
     .then(loadLaunches)
@@ -50,7 +52,7 @@ function submitLaunch() {
   const rocket = document.getElementById("rocket-name").value;
   const flightNumber = launches[launches.length - 1].flightNumber + 1;
 
-  return fetch("/launches", {
+  return fetch(`${API}/launches`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"

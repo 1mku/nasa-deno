@@ -1,54 +1,43 @@
-import { Application, log, send } from "./deps.ts";
+import {
+  Hono as Application,
+  HTTPException,
+  logger,
+  poweredBy,
+  serveStatic,
+} from "./deps.ts";
 import api from "./api.ts";
 
 const app = new Application();
 const PORT = 8000;
 
-app.use(async (ctx, next) => {
+app.use(logger());
+app.use(poweredBy());
+
+app.use(async (c, next) => {
+  const start = Date.now();
   await next();
-  const time = ctx.response.headers.get("X-Response-Time");
-  log.info(`${ctx.request.method} ${ctx.request.url}: ${time}`);
+  const end = Date.now();
+  c.res.headers.set("X-Response-Time", `${end - start}`);
 });
 
-app.use(async (ctx, next) => {
-  try {
-    await next();
-  } catch (err) {
-    ctx.response.body = "Internal server error";
-    throw err;
+app.onError((err, c) => {
+  if (err instanceof HTTPException) {
+    // Get the custom response
+    return err.getResponse();
   }
+  c.status(500);
+  return c.body("Internal server error");
 });
 
-app.addEventListener("error", (event) => {
-  log.error(event.error);
+addEventListener("error", (event) => {
+  logger(event.error);
 });
 
-app.use(async (ctx, next) => {
-  const startTime = Date.now();
-  await next();
-  const delta = Date.now() - startTime;
-  ctx.response.headers.set("X-Response-Time", `${delta}ms`);
-});
-
-app.use(api.routes());
-app.use(api.allowedMethods());
-
-app.use(async (ctx) => {
-  const filePath = ctx.request.url.pathname;
-  const fileWhitelist = [
-    "/index.html",
-    "/js/script.js",
-    "/css/style.css",
-    "/videos/bg.mp4",
-  ];
-  if (fileWhitelist.includes(filePath)) {
-    await send(ctx, filePath, {
-      root: `${Deno.cwd()}/public`,
-    });
-  }
-});
+app.get("/", serveStatic({ path: "public/index.html" }));
+app.route("/api", api);
+app.use("/public/*", serveStatic({ root: "/" }));
 
 // Learn more at https://deno.land/manual/examples/module_metadata#concepts
 if (import.meta.main) {
-  await app.listen({ port: PORT });
+  Deno.serve({ port: PORT }, app.fetch);
 }
